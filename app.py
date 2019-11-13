@@ -15,13 +15,13 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 api = Api(app, authorizations={
-                'API-KEY': {
-                    'type': 'apiKey',
-                    'in': 'header',
-                    'name': 'AUTH-TOKEN'
-                }
-            },
-          default= 'User credentials',
+    'API-KEY': {
+        'type': 'apiKey',
+        'in': 'header',
+        'name': 'AUTH-TOKEN'
+    }
+},
+          default='User credentials',
           security='API-KEY',
           description="This is just a simple example to show how publish data as a service.")
 port = 9999
@@ -37,8 +37,10 @@ credential_model = api.model('credential', {
 # parser
 parser = reqparse.RequestParser()
 credential_parser = reqparse.RequestParser()
-credential_parser.add_argument('username', type = str)
-credential_parser.add_argument('password', type = str)
+credential_parser.add_argument('username', type=str)
+credential_parser.add_argument('password', type=str)
+
+
 # Preparing the Classifier
 # load classifier from pickle
 
@@ -64,6 +66,7 @@ class AuthenticationToken:
             raise SignatureExpired("The Token has been expired; get a new token")
         return info['username']
 
+
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -77,12 +80,16 @@ def requires_auth(f):
         except BadSignature as e:
             abort(401, e.message)
         return f(*args, **kwargs)
+
     return decorated
+
 
 credential_model = api.model('credential', {
     'username': fields.String,
     'password': fields.String
 })
+
+
 @app.before_request
 def before_request_func():
     print("before_request is running!")
@@ -90,16 +97,60 @@ def before_request_func():
 
 @ns.route('/weather')
 class Weather(Resource):
-    #@requires_auth
+    @api.response(200, 'Successful')
+    @requires_auth
     def get(self):
         print("Using api to get weather data!")
-        # https://openweathermap.org/appid
-        response = requests.get('http://api.openweathermap.org/data/2.5/forecast?id=2147714&APPID=9d5a57bcfdb7d976e995381200306ca6')
-        if response.status_code == 404:
-            return {}
+        """# https://openweathermap.org/appid
+        response = requests.get('http://api.openweathermap.org/data/2.5/weather?id=2147714&APPID=9d5a57bcfdb7d976e995381200306ca6')
+        if response.status_code != 200:
+            return {'message': 'No current weather available!'}, 504
         recv = json.loads(response.content)
         print(recv)
-        return response.json()
+        return response.json()"""
+        response = {
+            "coord": {
+                "lon": 151.21,
+                "lat": -33.87
+            },
+            "weather": [
+                {
+                    "id": 800,
+                    "main": "Clear",
+                    "description": "clear sky",
+                    "icon": "01n"
+                }
+            ],
+            "base": "stations",
+            "main": {
+                "temp": 287.38,
+                "pressure": 1014,
+                "humidity": 33,
+                "temp_min": 284.82,
+                "temp_max": 291.15
+            },
+            "visibility": 10000,
+            "wind": {
+                "speed": 4.1,
+                "deg": 250
+            },
+            "clouds": {
+                "all": 0
+            },
+            "dt": 1573655580,
+            "sys": {
+                "type": 1,
+                "id": 9600,
+                "country": "AU",
+                "sunrise": 1573670684,
+                "sunset": 1573720463
+            },
+            "timezone": 39600,
+            "id": 2147714,
+            "name": "Sydney",
+            "cod": 200
+        }
+        return json.dumps(response)
 
 
 @ns.route('/predict')
@@ -112,7 +163,7 @@ class Prediction(Resource):
 
 @api.route('/users/authenticate')
 class Authentication(Resource):
-    @api.response(200,'Successful')
+    @api.response(200, 'Successful')
     @api.doc(description='Generates a authentication token')
     @api.expect(credential_parser, validate=True)
     def post(self):
@@ -122,8 +173,13 @@ class Authentication(Resource):
         password = args.get('password')
         sleep(0.5)
         if username == 'admin' and password == 'admin':
-            #{'id': 0, 'firstName':'Oyster', 'lastName':'Quin'}
-            return {"token": auth.generate_token(username)}
+            info = {'id': 0, 'firstName': 'Oyster', 'lastName': 'Quin', 'role': 'Admin',
+                    'token': auth.generate_token(username)}
+            return info
+        if username == 'user' and password == 'user':
+            info = {'id': 1, 'firstName': 'Ginny', 'lastName': 'Sharp', 'role': 'User',
+                    'token': auth.generate_token(username)}
+            return info
         return {'message': 'Username or password is incorrect'}, 401
 
 
@@ -133,4 +189,3 @@ if __name__ == '__main__':
     auth = AuthenticationToken(SECRET_KEY, expires_in)
     # run the application
     app.run(debug=True, port=port)
-
