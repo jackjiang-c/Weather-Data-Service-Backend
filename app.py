@@ -2,7 +2,7 @@ import pickle
 import json
 from functools import wraps
 from time import time, sleep
-
+from db import db
 import requests
 from flask import Flask
 from flask import request
@@ -90,6 +90,7 @@ credential_model = api.model('credential', {
 })
 
 
+
 @app.before_request
 def before_request_func():
     print("before_request is running!")
@@ -150,7 +151,8 @@ class Weather(Resource):
             "name": "Sydney",
             "cod": 200
         }
-        return json.dumps(response)
+        db.log_usage('weather',time())
+        return response
 
 
 @ns.route('/predict')
@@ -158,6 +160,7 @@ class Prediction(Resource):
     @requires_auth
     def post(self):
         result = {}
+        db.log_usage('predict',time())
         return result
 
 
@@ -183,8 +186,19 @@ class Authentication(Resource):
         return {'message': 'Username or password is incorrect'}, 401
 
 
+@api.route('/usage')
+class Usage(Resource):
+    @api.response(200, 'Successful')
+    @api.doc(description='Generate api total data usage')
+    @requires_auth
+    def get(self):
+        weather_usage = db.get_api_usage_24('weather')
+        predict_usage = db.get_api_usage_24('predict')
+        return {'weather': weather_usage, 'predict': predict_usage,'Good': None}
+
+
 if __name__ == '__main__':
-    SECRET_KEY = "I DONT ALWAYS USE INTERNET EXPLORER; BUT WHEN I DO, ITS USUALLY TO DOWNLOAD A BETTER BROWSER"
+    SECRET_KEY = "I DONT ALWAYS USE INTERNET EXPLORER BUT WHEN I DO ITS USUALLY TO DOWNLOAD A BETTER BROWSER"
     expires_in = 60000
     auth = AuthenticationToken(SECRET_KEY, expires_in)
     # run the application
