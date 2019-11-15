@@ -2,7 +2,7 @@ import pickle
 import json
 from functools import wraps
 from time import time, sleep
-from db import db
+
 import requests
 from flask import Flask
 from flask import request
@@ -13,6 +13,8 @@ from flask_restplus import inputs
 from itsdangerous import JSONWebSignatureSerializer, BadSignature, SignatureExpired
 from flask_cors import CORS
 
+import modules.db as db
+
 app = Flask(__name__)
 api = Api(app, authorizations={
     'API-KEY': {
@@ -21,14 +23,14 @@ api = Api(app, authorizations={
         'name': 'AUTH-TOKEN'
     }
 },
-          default='User credentials',
+          default='General request',
           security='API-KEY',
           description="This is just a simple example to show how publish data as a service.")
 port = 9999
 cors = CORS(app)
 ns = api.namespace('api', description='Weather Predict')
 
-# api schema:
+# api user credential schema:
 credential_model = api.model('credential', {
     'username': fields.String,
     'password': fields.String
