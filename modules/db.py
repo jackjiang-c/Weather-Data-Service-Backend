@@ -3,8 +3,8 @@ from time import time
 DAY = 86400
 
 
-def log_usage(api_type, current_time):
-    conn = sqlite3.connect('main.db')
+def log_usage(db, api_type, current_time):
+    conn = sqlite3.connect(db)
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS APIUSAGE (id integer primary key autoincrement, api text, time real);")
     try:
@@ -16,8 +16,8 @@ def log_usage(api_type, current_time):
 
 
 # return last 24hours usage
-def get_api_usage_24(api_type):
-    conn = sqlite3.connect('main.db')
+def get_api_usage_24(db, api_type):
+    conn = sqlite3.connect(db)
     cur = conn.cursor()
     try:
         cur.execute('select count(*) from APIUSAGE where api=? and ?-time< ?',(api_type, time(), DAY))

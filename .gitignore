@@ -1,6 +1,7 @@
 .idea
 *.sh
 main.db
+log.db
 output/
 tmp/nanoc/
 .Ds*

@@ -13,7 +13,10 @@ from flask_restplus import inputs
 from itsdangerous import JSONWebSignatureSerializer, BadSignature, SignatureExpired
 from flask_cors import CORS
 
+
+import random
 import modules.db as db
+import modules.waether_api as weather
 
 app = Flask(__name__)
 api = Api(app, authorizations={
@@ -104,14 +107,12 @@ class Weather(Resource):
     @requires_auth
     def get(self):
         print("Using api to get weather data!")
-        """# https://openweathermap.org/appid
-        response = requests.get('http://api.openweathermap.org/data/2.5/weather?id=2147714&APPID=9d5a57bcfdb7d976e995381200306ca6')
+        # https://openweathermap.org/appid
+        """response = requests.get('http://api.openweathermap.org/data/2.5/weather?id=2147714&APPID=9d5a57bcfdb7d976e995381200306ca6')
         if response.status_code != 200:
             return {'message': 'No current weather available!'}, 504
-        recv = json.loads(response.content)
-        print(recv)
-        return response.json()"""
-        response = {
+        recv = json.loads(response.content)"""
+        recv = {
             "coord": {
                 "lon": 151.21,
                 "lat": -33.87
@@ -153,16 +154,20 @@ class Weather(Resource):
             "name": "Sydney",
             "cod": 200
         }
-        db.log_usage('weather',time())
-        return response
+        db.log_usage(usage_db,'weather', time())
+        result = weather.convert_weather_data(recv)
+        return result
 
 
 @ns.route('/predict')
 class Prediction(Resource):
     @requires_auth
     def post(self):
-        result = {}
-        db.log_usage('predict',time())
+        print("Predicting weahter")
+        list = [20, 30, 40, 50, 60, 70, 80, 52, 23, 100]
+        result = random.choices(list, k=7)
+        db.log_usage(usage_db,'predict',time())
+        sleep(0.5)
         return result
 
 
@@ -191,15 +196,16 @@ class Authentication(Resource):
 @api.route('/usage')
 class Usage(Resource):
     @api.response(200, 'Successful')
-    @api.doc(description='Generate api total data usage')
+    @api.doc(description='Generate api usage information')
     @requires_auth
     def get(self):
-        weather_usage = db.get_api_usage_24('weather')
-        predict_usage = db.get_api_usage_24('predict')
+        weather_usage = db.get_api_usage_24(usage_db,'weather')
+        predict_usage = db.get_api_usage_24(usage_db,'predict')
         return {'weather': weather_usage, 'predict': predict_usage,'Good': None}
 
 
 if __name__ == '__main__':
+    usage_db = 'log.db'
     SECRET_KEY = "I DONT ALWAYS USE INTERNET EXPLORER BUT WHEN I DO ITS USUALLY TO DOWNLOAD A BETTER BROWSER"
     expires_in = 60000
     auth = AuthenticationToken(SECRET_KEY, expires_in)
