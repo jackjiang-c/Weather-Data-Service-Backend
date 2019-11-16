@@ -2,6 +2,7 @@ import pickle
 import json
 from functools import wraps
 from time import time, sleep
+import sqlite3
 
 import requests
 from flask import Flask
@@ -39,12 +40,27 @@ credential_model = api.model('credential', {
     'password': fields.String
 })
 
+# api user registration schema:
+registration_model =api.model('registration',{
+    'username': fields.String,
+    'password': fields.String,
+    'firstName': fields.String,
+    'lastName': fields.String,
+    'age': fields.Integer,
+})
+
 # parser
-parser = reqparse.RequestParser()
+#parser = reqparse.RequestParser()
 credential_parser = reqparse.RequestParser()
 credential_parser.add_argument('username', type=str)
 credential_parser.add_argument('password', type=str)
 
+registration_parser = reqparse.RequestParser()
+registration_parser.add_argument('username', type=str)
+registration_parser.add_argument('password', type=str)
+registration_parser.add_argument('firstName', type=str)
+registration_parser.add_argument('lastName', type=str)
+registration_parser.add_argument('age', type=int)
 
 # Preparing the Classifier
 # load classifier from pickle
@@ -89,18 +105,6 @@ def requires_auth(f):
     return decorated
 
 
-credential_model = api.model('credential', {
-    'username': fields.String,
-    'password': fields.String
-})
-
-
-
-@app.before_request
-def before_request_func():
-    print("before_request is running!")
-
-
 @ns.route('/weather')
 class Weather(Resource):
     @api.response(200, 'Successful')
@@ -112,6 +116,7 @@ class Weather(Resource):
         if response.status_code != 200:
             return {'message': 'No current weather available!'}, 504
         recv = json.loads(response.content)"""
+        # dummy current weather information (same json structure)
         recv = {
             "coord": {
                 "lon": 151.21,
@@ -171,6 +176,26 @@ class Prediction(Resource):
         return result
 
 
+@api.route('/users/register')
+class Registration(Resource):
+    @api.response(200, 'Successful')
+    @api.doc(description='Register a normal user')
+    @api.expect(registration_parser, validate=True)
+    def post(self):
+        args = registration_parser.parse_args()
+        reg_info = dict()
+        reg_info['username'] = args.get('username')
+        reg_info['password'] = args.get('password')
+        reg_info['firstName'] = args.get('firstName')
+        reg_info['lastName'] = args.get('lastName')
+        reg_info['age'] = args.get('age')
+        reg_info['role'] = 'User'
+        result = db.register(user_db, reg_info)
+        if result:
+            return 'Success'
+        else:
+            return reg_info['username'] + ' has already been taken', 403
+
 @api.route('/users/authenticate')
 class Authentication(Resource):
     @api.response(200, 'Successful')
@@ -178,7 +203,6 @@ class Authentication(Resource):
     @api.expect(credential_parser, validate=True)
     def post(self):
         args = credential_parser.parse_args()
-        # need to get to
         username = args.get('username')
         password = args.get('password')
         sleep(0.5)
@@ -206,6 +230,11 @@ class Usage(Resource):
 
 if __name__ == '__main__':
     usage_db = 'log.db'
+    user_db = 'user.db'
+    # initialize dababase
+    db.db_init(user_db,'user')
+    db.db_init(usage_db,'log')
+    # set up authentication
     SECRET_KEY = "I DONT ALWAYS USE INTERNET EXPLORER BUT WHEN I DO ITS USUALLY TO DOWNLOAD A BETTER BROWSER"
     expires_in = 60000
     auth = AuthenticationToken(SECRET_KEY, expires_in)

@@ -22,3 +22,4 @@ venv/
 .txt
 .DS_Store
 .~lock.README.txt#
+/user.db
