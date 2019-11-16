@@ -194,7 +194,7 @@ class Registration(Resource):
         if result:
             return 'Success'
         else:
-            return reg_info['username'] + ' has already been taken', 403
+            return {'message': 'Username: ' + reg_info['username'] + ' has already been taken.'}, 403
 
 @api.route('/users/authenticate')
 class Authentication(Resource):
