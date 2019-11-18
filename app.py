@@ -6,7 +6,7 @@ import sqlite3
 
 import requests
 from flask import Flask
-from flask import request
+from flask import request, jsonify
 from flask_restplus import Resource, Api, abort
 from flask_restplus import reqparse
 from flask_restplus import fields
@@ -95,13 +95,25 @@ def requires_auth(f):
         if not token:
             abort(401, 'Authentication token is missing')
         try:
+            user_endpoint = '/users/'
+            userEndPointIndex = request.url.find('/users/')
             user = auth.validate_token(token)
+            if userEndPointIndex >= 0:
+                usageEndPointIndex = request.url.find('/usage')
+                current_user = db.getuser(user_db, username=user)
+                if usageEndPointIndex < 0:
+                    uid = int(request.url[userEndPointIndex+len(user_endpoint):])
+                    # if the current user is not admin, it has no permission to access any other user's information
+                    if current_user[4] != 'Admin' and current_user[0] != uid:
+                        abort(403, "Current user has no permission to access this endpoint.")
+                else:
+                    if current_user[4] != 'Admin':
+                        abort(403, "Current user has no permission to access this endpoint.")
         except SignatureExpired as e:
             abort(401, e.message)
         except BadSignature as e:
             abort(401, e.message)
         return f(*args, **kwargs)
-
     return decorated
 
 
@@ -192,9 +204,30 @@ class Registration(Resource):
         reg_info['role'] = 'User'
         result = db.register(user_db, reg_info)
         if result:
-            return 'Success'
+            return jsonify({'message': 'Success'})
         else:
             return {'message': 'Username: ' + reg_info['username'] + ' has already been taken.'}, 403
+
+
+"""
+'id': userinfo[0], 'firstName': userinfo[1], 'lastName': userinfo[2], 'age': userinfo[3],
+                    'role': userinfo[4],
+"""
+
+
+@api.route('/users/<int:uid>')
+class Users(Resource):
+    @api.response(200, 'Successful')
+    @api.doc(description='Get user information by its ID')
+    @requires_auth
+    def get(self, uid):
+        user_info = db.getuser(user_db, uid=uid)
+        if user_info is None:
+            return {'message': 'ID not found'}, 404
+        else:
+            result = {'firstName': user_info[1], 'lastName': user_info[2], 'age': user_info[3],
+                      'role': user_info[4]}
+            return jsonify(result)
 
 
 @api.route('/users/authenticate')
@@ -208,17 +241,13 @@ class Authentication(Resource):
         password = args.get('password')
         sleep(0.5)
         userinfo = db.login(user_db, (username, password))
-        print(userinfo)
         if userinfo is None:
             return {'message': 'Username or password is incorrect'}, 401
         else:
-            info = {'id': userinfo[0], 'firstName': userinfo[1], 'lastName': userinfo[2], 'age': userinfo[3],
-                    'role': userinfo[4],
-                    'token': auth.generate_token(username)}
-            return info
+            return jsonify({'token': auth.generate_token(username), 'id': userinfo[0]})
 
 
-@api.route('/usage')
+@api.route('/users/usage')
 class Usage(Resource):
     @api.response(200, 'Successful')
     @api.doc(description='Generate api usage information')

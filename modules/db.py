@@ -45,12 +45,33 @@ def login(db, login_info):
     cur = conn.cursor()
     result = None
     try:
-        cur.execute('select id, firstName, lastName, age, role from users where username=? and password=?', (login_info[0], login_info[1]))
+        cur.execute('select id from users where username=? and password=?', (login_info[0], login_info[1]))
         result = cur.fetchone()
     except sqlite3.OperationalError:
         print('no such users table exits')
     conn.close()
     return result
+
+
+def getuser(db, uid=None, username=None):
+    conn = sqlite3.connect(db)
+    cur = conn.cursor()
+    result = None
+    if uid:
+        try:
+            cur.execute('select id, firstName, lastName, age, role from users where id=?', (uid,))
+            result = cur.fetchone()
+        except sqlite3.OperationalError:
+            print('no such users table exits')
+    else:
+        try:
+            cur.execute('select id, firstName, lastName, age, role from users where username=?', (username,))
+            result = cur.fetchone()
+        except sqlite3.OperationalError:
+            print('no such users table exits')
+    conn.close()
+    return result
+
 
 def log_usage(db, api_type, current_time):
     conn = sqlite3.connect(db)
