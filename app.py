@@ -171,7 +171,7 @@ class Weather(Resource):
             "name": "Sydney",
             "cod": 200
         }
-        db.log_usage(usage_db, 'weather', time())
+        db.log_usage(log_db, 'weather', time())
         result = weather.convert_weather_data(recv)
         return result
 
@@ -183,7 +183,7 @@ class Prediction(Resource):
         print("Predicting weahter")
         list = [20, 30, 40, 50, 60, 70, 80, 52, 23, 100]
         result = random.choices(list, k=7)
-        db.log_usage(usage_db, 'predict', time())
+        db.log_usage(log_db, 'predict', time())
         sleep(0.5)
         return result
 
@@ -203,16 +203,11 @@ class Registration(Resource):
         reg_info['age'] = args.get('age')
         reg_info['role'] = 'User'
         result = db.register(user_db, reg_info)
+        sleep(0.5)  # simulate delay
         if result:
             return jsonify({'message': 'Success'})
         else:
             return {'message': 'Username: ' + reg_info['username'] + ' has already been taken.'}, 403
-
-
-"""
-'id': userinfo[0], 'firstName': userinfo[1], 'lastName': userinfo[2], 'age': userinfo[3],
-                    'role': userinfo[4],
-"""
 
 
 @api.route('/users/<int:uid>')
@@ -239,7 +234,7 @@ class Authentication(Resource):
         args = credential_parser.parse_args()
         username = args.get('username')
         password = args.get('password')
-        sleep(0.5)
+        sleep(0.5)  # simulate delay
         userinfo = db.login(user_db, (username, password))
         if userinfo is None:
             return {'message': 'Username or password is incorrect'}, 401
@@ -250,20 +245,22 @@ class Authentication(Resource):
 @api.route('/users/usage')
 class Usage(Resource):
     @api.response(200, 'Successful')
-    @api.doc(description='Generate api usage information')
+    @api.doc(description='Generate api general usage information')
     @requires_auth
     def get(self):
-        weather_usage = db.get_api_usage_24(usage_db, 'weather')
-        predict_usage = db.get_api_usage_24(usage_db, 'predict')
-        return {'weather': weather_usage, 'predict': predict_usage, 'Good': None}
+        weather_usage_total = db.get_api_usage(log_db, 'weather',type='t')
+        weather_usage_24 = db.get_api_usage(log_db, 'weather', type='24')
+        weather_usage_7d = db.get_api_usage(log_db, 'weather', type='7d')
+        result = {'weather_total': weather_usage_total, 'weather_usage_24': weather_usage_24, ' weather_usage_7d':  weather_usage_7d}
+        return jsonify(result)
 
 
 if __name__ == '__main__':
-    usage_db = 'log.db'
+    log_db = 'log.db'
     user_db = 'user.db'
     # initialize dababase
     db.db_init(user_db, 'user')
-    db.db_init(usage_db, 'log')
+    db.db_init(log_db, 'log')
     # set up authentication
     SECRET_KEY = "I DONT ALWAYS USE INTERNET EXPLORER BUT WHEN I DO ITS USUALLY TO DOWNLOAD A BETTER BROWSER"
     expires_in = 60000
