@@ -14,7 +14,6 @@ from flask_restplus import inputs
 from itsdangerous import JSONWebSignatureSerializer, BadSignature, SignatureExpired
 from flask_cors import CORS
 
-
 import random
 import modules.db as db
 import modules.waether_api as weather
@@ -41,7 +40,7 @@ credential_model = api.model('credential', {
 })
 
 # api user registration schema:
-registration_model =api.model('registration',{
+registration_model = api.model('registration', {
     'username': fields.String,
     'password': fields.String,
     'firstName': fields.String,
@@ -50,7 +49,7 @@ registration_model =api.model('registration',{
 })
 
 # parser
-#parser = reqparse.RequestParser()
+# parser = reqparse.RequestParser()
 credential_parser = reqparse.RequestParser()
 credential_parser.add_argument('username', type=str)
 credential_parser.add_argument('password', type=str)
@@ -61,6 +60,7 @@ registration_parser.add_argument('password', type=str)
 registration_parser.add_argument('firstName', type=str)
 registration_parser.add_argument('lastName', type=str)
 registration_parser.add_argument('age', type=int)
+
 
 # Preparing the Classifier
 # load classifier from pickle
@@ -159,7 +159,7 @@ class Weather(Resource):
             "name": "Sydney",
             "cod": 200
         }
-        db.log_usage(usage_db,'weather', time())
+        db.log_usage(usage_db, 'weather', time())
         result = weather.convert_weather_data(recv)
         return result
 
@@ -171,7 +171,7 @@ class Prediction(Resource):
         print("Predicting weahter")
         list = [20, 30, 40, 50, 60, 70, 80, 52, 23, 100]
         result = random.choices(list, k=7)
-        db.log_usage(usage_db,'predict',time())
+        db.log_usage(usage_db, 'predict', time())
         sleep(0.5)
         return result
 
@@ -196,6 +196,7 @@ class Registration(Resource):
         else:
             return {'message': 'Username: ' + reg_info['username'] + ' has already been taken.'}, 403
 
+
 @api.route('/users/authenticate')
 class Authentication(Resource):
     @api.response(200, 'Successful')
@@ -206,15 +207,15 @@ class Authentication(Resource):
         username = args.get('username')
         password = args.get('password')
         sleep(0.5)
-        if username == 'admin' and password == 'admin':
-            info = {'id': 0, 'firstName': 'Oyster', 'lastName': 'Quin', 'role': 'Admin',
+        userinfo = db.login(user_db, (username, password))
+        print(userinfo)
+        if userinfo is None:
+            return {'message': 'Username or password is incorrect'}, 401
+        else:
+            info = {'id': userinfo[0], 'firstName': userinfo[1], 'lastName': userinfo[2], 'age': userinfo[3],
+                    'role': userinfo[4],
                     'token': auth.generate_token(username)}
             return info
-        if username == 'user' and password == 'user':
-            info = {'id': 1, 'firstName': 'Ginny', 'lastName': 'Sharp', 'role': 'User',
-                    'token': auth.generate_token(username)}
-            return info
-        return {'message': 'Username or password is incorrect'}, 401
 
 
 @api.route('/usage')
@@ -223,17 +224,17 @@ class Usage(Resource):
     @api.doc(description='Generate api usage information')
     @requires_auth
     def get(self):
-        weather_usage = db.get_api_usage_24(usage_db,'weather')
-        predict_usage = db.get_api_usage_24(usage_db,'predict')
-        return {'weather': weather_usage, 'predict': predict_usage,'Good': None}
+        weather_usage = db.get_api_usage_24(usage_db, 'weather')
+        predict_usage = db.get_api_usage_24(usage_db, 'predict')
+        return {'weather': weather_usage, 'predict': predict_usage, 'Good': None}
 
 
 if __name__ == '__main__':
     usage_db = 'log.db'
     user_db = 'user.db'
     # initialize dababase
-    db.db_init(user_db,'user')
-    db.db_init(usage_db,'log')
+    db.db_init(user_db, 'user')
+    db.db_init(usage_db, 'log')
     # set up authentication
     SECRET_KEY = "I DONT ALWAYS USE INTERNET EXPLORER BUT WHEN I DO ITS USUALLY TO DOWNLOAD A BETTER BROWSER"
     expires_in = 60000

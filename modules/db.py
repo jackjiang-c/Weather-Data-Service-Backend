@@ -40,6 +40,18 @@ def register(db, reg_info):
     return True
 
 
+def login(db, login_info):
+    conn = sqlite3.connect(db)
+    cur = conn.cursor()
+    result = None
+    try:
+        cur.execute('select id, firstName, lastName, age, role from users where username=? and password=?', (login_info[0], login_info[1]))
+        result = cur.fetchone()
+    except sqlite3.OperationalError:
+        print('no such users table exits')
+    conn.close()
+    return result
+
 def log_usage(db, api_type, current_time):
     conn = sqlite3.connect(db)
     cur = conn.cursor()
@@ -51,7 +63,7 @@ def log_usage(db, api_type, current_time):
     conn.close()
 
 
-# return last 24hours usage
+# return last 24hours usage for a specific api
 def get_api_usage_24(db, api_type):
     conn = sqlite3.connect(db)
     cur = conn.cursor()
