@@ -1,0 +1,31 @@
+1. result_new.csv
+	Both training set and test set are stored in "result_new.csv"
+	We need following data to train models:
+	a.Temp_avg (celsius)
+		Temp_avg = (MaxTemp + MinTemp)/2 
+	b.Rainfall (mm)
+	c.Evaporation (mm)
+	d.Sunshine (hours)
+	e.WindGustSpeed (km/h)
+	f.WindSpeed_avg (km/h)
+		WindSpeed_avg = (WindSpeed3pm + WindSpeed3pm)/2
+	g.Humidity_Avg (percent)
+		Humidity_Avg = (Humidity9am + Humidity3pm)/2
+	h.Pressure_avg (hpa)
+		Pressure_avg = (Pressure9am + Pressure3pm)/2
+	i.Cloud_avg (oktas)	
+		Cloud_avg = (Cloud3pm + Cloud9am)/2
+	We predict three wheather metrics:
+	a.tomorrow_rain (cetagorical: Yes, No)
+	b.tomorrow_wind (cetagorical: Strong, Common)
+	c.tomorrow_temp_avg (numerical: celsius)
+
+2. Weather_model.py
+	We train three model by using training set and validate it by testset. Models are saved as:
+3. rain.model
+4. temp.model
+5. wind.model
+5. Predict_model.py
+ 	we load above 3 models and make predictions by the input from client.
+	
+		
