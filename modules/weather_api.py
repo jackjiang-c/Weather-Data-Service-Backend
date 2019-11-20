@@ -121,14 +121,14 @@ def get2DayData(ds, soup_csv):
     return dict(ds.iloc[today - 1]), dict(ds.iloc[today - 2])
 
 
-def getValue(l1,l2, key,default=0, special='Calm'):
+def getValue(l1,l2, key, default=0, special='Calm'):
     if l1[key] != 'NaN' and l1[key] != ' ':
         if l1[key] == special:
             return 0
-        return l1[key]
+        return float(l1[key])
     else:
         if l2[key] != 'NaN' and l2[key] != ' ':
-            return l2[key]
+            return float(l2[key])
         else:
             return default
 
@@ -144,9 +144,9 @@ def get_predict_data_from_site(link):
             if p_mean[k] == ' ':
                 r_mean[k] = 0
             else:
-                r_mean[k] = p_mean[k]
+                r_mean[k] = float(p_mean[k])
         else:
-            r_mean[k] = c_mean[k]
+            r_mean[k] = float(c_mean[k])
     return last, last2, r_mean
 
 
@@ -182,9 +182,10 @@ def get_weather_data():
     cloud3pm = getValue(l1, l2, '3pm cloud amount (oktas)', default=mean['3pm cloud amount (oktas)'])
     avgcloud = (cloud9am + cloud3pm) / 2
     weather = [avgtemp, rainfall, evap, sunshine, windGustSpeed, avgwindspeed, avghumidity, avgpressure, avgcloud]
-    col_name = ["temp_avg", "rainfall", "evaporation", "sunshine", "windGustSpeed", "windSpeed_avg", "humidity_Avg",
+    col_name = ["temp_avg", "rainfall", "evaporation", "sunshine", "windGustSpeed", "windSpeed_avg", "humidity_avg",
                 "pressure_avg", "cloud_avg"]
     data = {col_name[i]: weather[i] for i in range(len(weather))}
+    print(data)
     return data
 
     # http://www.bom.gov.au/climate/dwo/IDCJDW2124.latest.shtml

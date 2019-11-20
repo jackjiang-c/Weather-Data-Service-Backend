@@ -11,9 +11,9 @@ from sklearn.externals import joblib
 # data pre-process
 df = pd.read_csv("result_new.csv")
 df = df[:-1]
-X = df.loc[:, :'Cloud_avg']
+X = df.loc[:, :'cloud_avg']
 Y = df.loc[:,"tomorrow_rain":]
-weather_value = df.tail().loc[:, :"Cloud_avg"]
+weather_value = df.tail().loc[:, :"cloud_avg"]
 # using random forest regerssor and classifier to make predictions
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, train_size=0.8, random_state=4)
 
