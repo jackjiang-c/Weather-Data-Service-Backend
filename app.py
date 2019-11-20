@@ -16,7 +16,7 @@ from flask_cors import CORS
 
 import random
 import modules.db as db
-import modules.waether_api as weather
+import modules.weather_api as weather
 
 app = Flask(__name__)
 api = Api(app, authorizations={
@@ -205,6 +205,7 @@ class Registration(Resource):
         result = db.register(user_db, reg_info)
         sleep(0.5)  # simulate delay
         if result:
+            db.log_usage(log_db,'register',time())
             return jsonify({'message': 'Success'})
         else:
             return {'message': 'Username: ' + reg_info['username'] + ' has already been taken.'}, 403
@@ -239,19 +240,35 @@ class Authentication(Resource):
         if userinfo is None:
             return {'message': 'Username or password is incorrect'}, 401
         else:
+            db.log_usage(log_db,'authenticate',time())
             return jsonify({'token': auth.generate_token(username), 'id': userinfo[0]})
 
 
 @api.route('/users/usage')
 class Usage(Resource):
     @api.response(200, 'Successful')
-    @api.doc(description='Generate api general usage information')
+    @api.doc(description='Generate major api usage information')
     @requires_auth
     def get(self):
         weather_usage_total = db.get_api_usage(log_db, 'weather',type='t')
         weather_usage_24 = db.get_api_usage(log_db, 'weather', type='24')
         weather_usage_7d = db.get_api_usage(log_db, 'weather', type='7d')
-        result = {'weather_total': weather_usage_total, 'weather_usage_24': weather_usage_24, ' weather_usage_7d':  weather_usage_7d}
+        # predict api
+        predict_usage_total = db.get_api_usage(log_db, 'predict',type='t')
+        predict_usage_24 = db.get_api_usage(log_db, 'predict', type='24')
+        predict_usage_7d = db.get_api_usage(log_db, 'predict', type='7d')
+        # register api only record the successful registration
+        register_usage_total = db.get_api_usage(log_db, 'register',type='t')
+        register_usage_24 = db.get_api_usage(log_db, 'register', type='24')
+        register_usage_7d = db.get_api_usage(log_db, 'register', type='7d')
+        # authentication api
+        auth_usage_total = db.get_api_usage(log_db, 'authenticate',type='t')
+        auth_usage_24 = db.get_api_usage(log_db, 'authenticate', type='24')
+        auth_usage_7d = db.get_api_usage(log_db, 'authenticate', type='7d')
+        result = {'weather': {'last24': weather_usage_24, 'last7d': weather_usage_7d, 'total': weather_usage_total},
+                  'predict': {'last24': predict_usage_24, 'last7d': predict_usage_7d, 'total': predict_usage_total},
+                  'authenticate': {'last24': auth_usage_24, 'last7d': auth_usage_7d, 'total': auth_usage_total},
+                  'register': {'last24': register_usage_24, 'last7d': register_usage_7d, 'total': register_usage_total}}
         return jsonify(result)
 
 

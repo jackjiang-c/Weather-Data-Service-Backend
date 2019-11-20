@@ -108,15 +108,18 @@ def get_api_usage(db, api_type, type='24'):
         if type == 't' or type == '24':
             temp = cur.fetchone()
             result = dict()
-            result[api_type] = temp[0]
+            result = temp[0]
         else:
             day_usage = dict(cur.fetchall())
-            result = dict()
+            dic = dict()
+            result = []
             for day in days:
                 temp1 = day.split('/')
                 temp = temp1[0]+'/'+temp1[1]
-                result[temp] = day_usage.get(temp, 0)
-            print(result)
+                dic[temp] = day_usage.get(temp, 0)
+            for k,v in dic.items():
+                result.append(v)
+            result.reverse()
         conn.close()
         return result
     except sqlite3.IntegrityError:
