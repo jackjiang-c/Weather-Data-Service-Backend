@@ -57,6 +57,7 @@ def getMean(soup):
             mean_data[col_name[i]] = weather_data[i].get_text()
     return mean_data
 
+
 def getCSVLink(link):
     page = requests.get(link)
     soup = bs(page.content, 'html.parser')

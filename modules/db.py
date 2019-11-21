@@ -13,13 +13,13 @@ def db_init(db, type):
             "CREATE TABLE IF NOT EXISTS APIUSAGE (id integer primary key autoincrement, api text, log_time real);")
     if type == 'user':
         cur.execute("CREATE TABLE IF NOT EXISTS users (id integer primary key autoincrement,"
-                    "username text unique, password text, firstName text, lastName text, age real, role text not null);")
+                    "username text unique, password text, firstName text, lastName text, age real, gender text, role text not null);")
         cur.execute('SELECT id from users where id = 1;')
         check = cur.fetchone()
         if not check:
-            cur.execute('INSERT INTO users (username, password, firstName, lastName, age, role)'
-                        'VALUES (?,?,?,?,?,?)',
-                        ('admin', 'admin', 'Ray', 'Lee', 32, 'Admin'))
+            cur.execute('INSERT INTO users (username, password, firstName, lastName, age, gender, role)'
+                        'VALUES (?,?,?,?,?,?,?)',
+                        ('admin', 'admin', 'Ray', 'Lee', 32, 'Male', 'Admin'))
     conn.commit()
     conn.close()
 
@@ -28,10 +28,10 @@ def register(db, reg_info):
     conn = sqlite3.connect(db)
     cur = conn.cursor()
     try:
-        cur.execute('INSERT INTO users (username, password, firstName, lastName, age, role)'
-                    ' VALUES (?,?,?,?,?,?);',
+        cur.execute('INSERT INTO users (username, password, firstName, lastName, age, gender, role)'
+                    ' VALUES (?,?,?,?,?,?,?);',
                     (reg_info['username'], reg_info['password'], reg_info['firstName'], reg_info['lastName'],
-                     reg_info['age'], reg_info['role']))
+                     reg_info['age'],reg_info['gender'],reg_info['role']))
     except sqlite3.IntegrityError:
         print("username has already been taken")
         conn.close()
@@ -60,13 +60,13 @@ def getuser(db, uid=None, username=None):
     result = None
     if uid:
         try:
-            cur.execute('select id, firstName, lastName, age, role from users where id=?', (uid,))
+            cur.execute('select id, firstName, lastName, age, gender, role from users where id=?', (uid,))
             result = cur.fetchone()
         except sqlite3.OperationalError:
             print('no such users table exits')
     else:
         try:
-            cur.execute('select id, firstName, lastName, age, role from users where username=?', (username,))
+            cur.execute('select id, firstName, lastName, age, gender, role from users where username=?', (username,))
             result = cur.fetchone()
         except sqlite3.OperationalError:
             print('no such users table exits')

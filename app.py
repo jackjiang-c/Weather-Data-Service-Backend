@@ -28,33 +28,47 @@ api = Api(app, authorizations={
         'name': 'AUTH-TOKEN'
     }
 },
-          default='General request',
-          security='API-KEY',
-          description="This is just a simple example to show how publish data as a service.")
+      default='General request',
+      security='API-KEY',
+      description="Weather prediction service api")
+
 port = 9999
 cors = CORS(app)
-ns = api.namespace('api', description='Weather Predict')
+
+users = api.namespace('users', description='User operations')
+apis = api.namespace('api', description='Statistics about the api')
 
 # api user registration schema:
-registration_model = api.model('registration', {
-    'username': fields.String,
-    'password': fields.String,
-    'firstName': fields.String,
-    'lastName': fields.String,
-    'age': fields.Integer,
+registration_model = users.model('registration', {
+    'username': fields.String(description='The username of user', require=True, min_length=4),
+    'password': fields.String(description='The password of user', require=True, min_length=6),
+    'firstName': fields.String(description='The first name of user', require=True, min_length=1),
+    'lastName': fields.String(description='The last name of user', require=True, min_length=1),
+    'age': fields.Integer(description='The age of user', require=True, min=0, max=200),
+    'gender': fields.String(description='The gender of user', require=True, enum=['Male', 'Female'])
 })
 
-# api climate schema:
-climate_model = api.model('climate', {
-    'temp_avg': fields.Float,
-    'rainfall': fields.Float,
-    'evaporation': fields.Float,
-    'sunshine': fields.Float,
-    'windGustSpeed': fields.Float,
-    'windSpeed_avg': fields.Float,
-    'humidity_avg': fields.Float,
-    'pressure_avg': fields.Float,
-    'cloud_avg': fields.Float
+user_model = api.model('user information', {
+    'firstName': fields.String(description='The first name of user', require=True, min_length=1),
+    'lastName': fields.String(description='The last name of user', require=True, min_length=1),
+    'age': fields.Integer(description='The age of user', require=True, min=0, max=200),
+    'gender': fields.String(description='The gender of user', require=True, enum=['Male', 'Female'])
+})
+
+climate_model = users.model('climate', {
+    'temp_avg': fields.Float(description='The average temperature', require=True, min=-50, max=80),
+    'rainfall': fields.Float(description='The railfall', require=True, min=0, max=2000),
+    'evaporation': fields.Float(description='The evaporation', require=True, min=0, max=1000),
+    'sunshine': fields.Float(description='The sunshine duration', require=True, min=0, max=24),
+    'windGustSpeed': fields.Float(description='The wind gust speed', require=True, min=0, max=500),
+    'windSpeed_avg': fields.Float(description='The average wind speed', require=True, min=0, max=500),
+    'humidity_avg': fields.Float(description='The average humidity', require=True, min=0, max=100),
+    'pressure_avg': fields.Float(description='The average pressure', require=True, min=0, max=2000),
+    'cloud_avg': fields.Float(description='The wind gust speed', require=True, min=0, max=100)
+})
+
+api_type = api.model('api_type', {
+    'api_type': fields.String
 })
 
 # parser
@@ -93,20 +107,15 @@ def requires_auth(f):
         if not token:
             abort(401, 'Authentication token is missing')
         try:
-            user_endpoint = '/users/'
-            userEndPointIndex = request.url.find('/users/')
+            user_endpoint = '/get_info/'
+            userEndPointIndex = request.url.find(user_endpoint)
             user = auth.validate_token(token)
             if userEndPointIndex >= 0:
-                usageEndPointIndex = request.url.find('/usage')
                 current_user = db.getuser(user_db, username=user)
-                if usageEndPointIndex < 0:
-                    uid = int(request.url[userEndPointIndex + len(user_endpoint):])
-                    # if the current user is not admin, it has no permission to access any other user's information
-                    if current_user[4] != 'Admin' and current_user[0] != uid:
-                        abort(403, "Current user has no permission to access this endpoint.")
-                else:
-                    if current_user[4] != 'Admin':
-                        abort(403, "Current user has no permission to access this endpoint.")
+                uid = int(request.url[userEndPointIndex + len(user_endpoint):])
+                # if the current user is not admin, it has no permission to access any other user's information
+                if current_user[5] != 'Admin' and current_user[0] != uid:
+                    abort(403, "Current user has no permission to access this endpoint.")
         except SignatureExpired as e:
             abort(401, e.message)
         except BadSignature as e:
@@ -116,17 +125,21 @@ def requires_auth(f):
     return decorated
 
 
-@ns.route('/weather')
-class Weather(Resource):
-    @api.response(200, 'Successful')
+@users.route('/get_weather')
+class getWeather(Resource):
+    @users.response(401, 'Authentication token is missing or expired')
+    @users.response(200, 'Get the current weather Successful from the upstream weather api')
+    @users.response(504, 'No repsonse from the upstream weather api')
+    @users.doc(description='get real time weather data')
     @requires_auth
     def get(self):
-        """response = requests.get('http://api.openweathermap.org/data/2.5/weather?id=2147714&APPID=9d5a57bcfdb7d976e995381200306ca6')
+        response = requests.get(
+            'http://api.openweathermap.org/data/2.5/weather?id=2147714&APPID=9d5a57bcfdb7d976e995381200306ca6')
         if response.status_code != 200:
             return {'message': 'No current weather available!'}, 504
-        recv = json.loads(response.content)"""
+        recv = json.loads(response.content)
         # dummy current weather information (same json structure)
-        recv = {
+        """recv = {
             "coord": {
                 "lon": 151.21,
                 "lat": -33.87
@@ -167,7 +180,7 @@ class Weather(Resource):
             "id": 2147714,
             "name": "Sydney",
             "cod": 200
-        }
+        }"""
         w = weather.convert_weather_data(recv)
         # dummy climate
         """cli = {'temp_avg': 25.1, 'rainfall': 0.0, 'evaporation': 14.4, 'sunshine': 12.4, 'windGustSpeed': 56.0,
@@ -177,10 +190,12 @@ class Weather(Resource):
         return jsonify({'weather': w, 'climate': cli})
 
 
-@ns.route('/predict')
+@users.route('/predict_weather')
 class Prediction(Resource):
-    @ns.doc(description='predict wind, rain and temperature by climate data')
-    @ns.expect(climate_model, validate=True)
+    @users.response(401, 'Authentication token is missing or expired')
+    @users.response(200, 'The prediction has been made successfully')
+    @users.doc(description='Predict wind, rain and temperature by climate data')
+    @users.expect(climate_model, validate=True)
     @requires_auth
     def post(self):
         climate = request.json
@@ -197,6 +212,7 @@ class Prediction(Resource):
             if data < value_validation[key][0] or data > value_validation[key][1]:
                 return {'message': 'The property {} is invalid'.format(key)}, 400
             transform[key] = data
+        print(transform)
         result = predictWeather(transform, rain_predictor, wind_predictor, temp_predictor)
         db.log_usage(log_db, 'predict', time())
         sleep(0.4)
@@ -204,11 +220,12 @@ class Prediction(Resource):
         return jsonify(result)
 
 
-@api.route('/users/register')
+@users.route('/signup')
 class Registration(Resource):
-    @api.response(200, 'Successful')
-    @api.doc(description='Register a normal user')
-    @api.expect(registration_model, validate=True)
+    @users.response(200, 'The new user has been created successfully')
+    @users.response(400, 'The validation error, some fields are invalid or missing.')
+    @users.doc(description='Create a new user')
+    @users.expect(registration_model, validate=True)
     def post(self):
         reg_info = request.json
         validator = {'username': [4], 'password': [6], 'firstName': [1], 'lastName': [1], 'age': [1, 199]}
@@ -234,10 +251,13 @@ class Registration(Resource):
             return {'message': 'Username: ' + reg_info['username'] + ' has already been taken.'}, 400
 
 
-@api.route('/users/<int:uid>')
+@users.route('/get_info/<int:uid>')
 class Users(Resource):
-    @api.response(200, 'Successful')
-    @api.doc(description='Get user information by its ID')
+    @users.response(200, 'The user information has been generated and returned successfully', model=user_model)
+    @users.response(401, 'Authentication token is missing or expired')
+    @users.response(403, 'No permission to access. Normal user can only access own id endpoint')
+    @users.response(404, 'The user id is not exist')
+    @users.doc(description='Return the user information by specific id', params={'id': 'A user ID'})
     @requires_auth
     def get(self, uid):
         user_info = db.getuser(user_db, uid=uid)
@@ -245,15 +265,16 @@ class Users(Resource):
             return {'message': 'ID has not found'}, 404
         else:
             result = {'firstName': user_info[1], 'lastName': user_info[2], 'age': user_info[3],
-                      'role': user_info[4]}
+                      'gender': user_info[4], 'role': user_info[5]}
             return jsonify(result)
 
 
-@api.route('/users/authenticate')
+@users.route('/login')
 class Authentication(Resource):
-    @api.response(200, 'Successful')
-    @api.doc(description='Generates a authentication token')
-    @api.expect(credential_parser, validate=True)
+    @users.response(200, 'user login successfully and a authentication has been returned.')
+    @users.response(401, 'user\'s login credential information is incorrect')
+    @users.doc(description='Return an authentication token for user')
+    @users.expect(credential_parser, validate=True)
     def post(self):
         args = credential_parser.parse_args()
         username = args.get('username')
@@ -267,10 +288,10 @@ class Authentication(Resource):
             return jsonify({'token': auth.generate_token(username), 'id': userinfo[0]})
 
 
-@api.route('/users/usage')
+@apis.route('/usage')
 class Usage(Resource):
-    @api.response(200, 'Successful')
-    @api.doc(description='Generate major api usage information')
+    @apis.response(200, 'The usage data has generated and returned successfully')
+    @apis.doc(description='Generate all api usage information')
     @requires_auth
     def get(self):
         weather_usage_total = db.get_api_usage(log_db, 'weather', type='t')
@@ -288,11 +309,24 @@ class Usage(Resource):
         auth_usage_total = db.get_api_usage(log_db, 'authenticate', type='t')
         auth_usage_24 = db.get_api_usage(log_db, 'authenticate', type='24')
         auth_usage_7d = db.get_api_usage(log_db, 'authenticate', type='7d')
-        result = {'weather': {'last24': weather_usage_24, 'last7d': weather_usage_7d, 'total': weather_usage_total},
-                  'predict': {'last24': predict_usage_24, 'last7d': predict_usage_7d, 'total': predict_usage_total},
-                  'authenticate': {'last24': auth_usage_24, 'last7d': auth_usage_7d, 'total': auth_usage_total},
-                  'register': {'last24': register_usage_24, 'last7d': register_usage_7d, 'total': register_usage_total}}
+        result = {'get_weather': {'last24': weather_usage_24, 'last7d': weather_usage_7d, 'total': weather_usage_total},
+                  'predict_weather': {'last24': predict_usage_24, 'last7d': predict_usage_7d, 'total': predict_usage_total},
+                  'login': {'last24': auth_usage_24, 'last7d': auth_usage_7d, 'total': auth_usage_total},
+                  'signup': {'last24': register_usage_24, 'last7d': register_usage_7d, 'total': register_usage_total}}
         return jsonify(result)
+
+
+@apis.route('/usage/<string:api_name>')
+class Usage(Resource):
+    @apis.response(200, 'The user information has return successfully')
+    @apis.doc(description='Generate specific api usage information',params={'api_name': 'The name of the api'})
+    def get(self, api_name):
+        if api_name not in {'predict_weather', 'login', 'get_weather', 'signup', 'usage'}:
+            apis.abort(404, "API {} doesn't exist".format(api_name))
+        usage_total = db.get_api_usage(log_db, 'weather', type='t')
+        usage_24 = db.get_api_usage(log_db, 'weather', type='24')
+        usage_7d = db.get_api_usage(log_db, 'weather', type='7d')
+        return {'last24': usage_24, 'last7d': usage_7d, 'total': usage_total}
 
 
 if __name__ == '__main__':
@@ -301,7 +335,6 @@ if __name__ == '__main__':
     # initialize dababase
     db.db_init(user_db, 'user')
     db.db_init(log_db, 'log')
-
     # load saved models
     rain_predictor = joblib.load('./models/rain.model')
     temp_predictor = joblib.load('./models/temp.model')
