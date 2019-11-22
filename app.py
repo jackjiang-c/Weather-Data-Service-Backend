@@ -116,6 +116,12 @@ def requires_auth(f):
                 # if the current user is not admin, it has no permission to access any other user's information
                 if current_user[5] != 'Admin' and current_user[0] != uid:
                     abort(403, "Current user has no permission to access this endpoint.")
+            usage_endpoint = '/usage'
+            usageEndPointIndex = request.url.find(usage_endpoint)
+            if usageEndPointIndex >= 0:
+                current_user = db.getuser(user_db, username=user)
+                if current_user[5] != 'Admin':
+                    abort(403, "Only authorized user has permission to access this endpoint.")
         except SignatureExpired as e:
             abort(401, e.message)
         except BadSignature as e:
@@ -291,6 +297,8 @@ class Authentication(Resource):
 @apis.route('/usage')
 class Usage(Resource):
     @apis.response(200, 'The usage data has generated and returned successfully')
+    @apis.response(404, 'The usage information does not exist')
+    @apis.response(403, 'No permission to access this api')
     @apis.doc(description='Generate all api usage information')
     @requires_auth
     def get(self):
@@ -318,14 +326,17 @@ class Usage(Resource):
 
 @apis.route('/usage/<string:api_name>')
 class Usage(Resource):
-    @apis.response(200, 'The user information has return successfully')
+    @apis.response(200, 'The usage information has return successfully')
+    @apis.response(404, 'The usage information does not exist')
+    @apis.response(403, 'No permission to access this api')
     @apis.doc(description='Generate specific api usage information',params={'api_name': 'The name of the api'})
     def get(self, api_name):
-        if api_name not in {'predict_weather', 'login', 'get_weather', 'signup', 'usage'}:
-            apis.abort(404, "API {} doesn't exist".format(api_name))
-        usage_total = db.get_api_usage(log_db, 'weather', type='t')
-        usage_24 = db.get_api_usage(log_db, 'weather', type='24')
-        usage_7d = db.get_api_usage(log_db, 'weather', type='7d')
+        log_map = {'predict_weather': 'predict', 'login':'authenticate', 'get_weather':'weather', 'signup':'register'}
+        if api_name not in log_map.keys():
+            apis.abort(404, "API {} doesn't support to be check or doesn't exist".format(api_name))
+        usage_total = db.get_api_usage(log_db, log_map[api_name], type='t')
+        usage_24 = db.get_api_usage(log_db, log_map[api_name], type='24')
+        usage_7d = db.get_api_usage(log_db, log_map[api_name], type='7d')
         return {'last24': usage_24, 'last7d': usage_7d, 'total': usage_total}
 
 
