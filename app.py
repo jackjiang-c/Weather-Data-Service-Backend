@@ -18,7 +18,7 @@ from sklearn.externals import joblib
 import modules.db as db
 import modules.weather_api as weather
 from models.Predict_model import predictWeather
-from modules.helps import is_number
+from modules.helps import is_number, give_solution
 
 app = Flask(__name__)
 api = Api(app, authorizations={
@@ -222,6 +222,11 @@ class Prediction(Resource):
         db.log_usage(log_db, 'predict_weather', time())
         sleep(0.2)
         result['temp'] = float(format(result['temp'], '.1f'))
+        token = request.headers.get('AUTH-TOKEN')
+        user = auth.validate_token(token)
+        current_user = db.getuser(user_db, username=user)
+        r = give_solution(result['temp'], result['wind'], result['rain'], current_user[4], current_user[3])
+        result['clothes'] = r
         return jsonify(result)
 
 
