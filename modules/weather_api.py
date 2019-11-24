@@ -186,7 +186,6 @@ def get_weather_data():
     col_name = ["temp_avg", "rainfall", "evaporation", "sunshine", "windGustSpeed", "windSpeed_avg", "humidity_avg",
                 "pressure_avg", "cloud_avg"]
     data = {col_name[i]: weather[i] for i in range(len(weather))}
-    print(data)
     return data
 
     # http://www.bom.gov.au/climate/dwo/IDCJDW2124.latest.shtml

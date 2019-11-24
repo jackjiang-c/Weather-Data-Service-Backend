@@ -135,7 +135,7 @@ def requires_auth(f):
 class getWeather(Resource):
     @users.response(401, 'Authentication token is missing or expired')
     @users.response(200, 'Get the current weather Successful from the upstream weather api')
-    @users.response(504, 'No repsonse from the upstream weather api')
+    @users.response(504, 'No response from the upstream weather api')
     @users.doc(description='get real time weather data')
     @requires_auth
     def get(self):
@@ -192,7 +192,7 @@ class getWeather(Resource):
         """cli = {'temp_avg': 25.1, 'rainfall': 0.0, 'evaporation': 14.4, 'sunshine': 12.4, 'windGustSpeed': 56.0,
                'windSpeed_avg': 18.5, 'humidity_avg': 43.5, 'pressure_avg': 1013.2, 'cloud_avg': 4.0}"""
         cli = weather.get_weather_data()
-        db.log_usage(log_db, 'weather', time())
+        db.log_usage(log_db, 'get_weather', time())
         return jsonify({'weather': w, 'climate': cli})
 
 
@@ -218,10 +218,9 @@ class Prediction(Resource):
             if data < value_validation[key][0] or data > value_validation[key][1]:
                 return {'message': 'The property {} is invalid'.format(key)}, 400
             transform[key] = data
-        print(transform)
         result = predictWeather(transform, rain_predictor, wind_predictor, temp_predictor)
-        db.log_usage(log_db, 'predict', time())
-        sleep(0.4)
+        db.log_usage(log_db, 'predict_weather', time())
+        sleep(0.2)
         result['temp'] = float(format(result['temp'], '.1f'))
         return jsonify(result)
 
@@ -285,7 +284,7 @@ class Authentication(Resource):
         args = credential_parser.parse_args()
         username = args.get('username')
         password = args.get('password')
-        sleep(0.5)  # simulate delay
+        sleep(0.3)  # simulate delay
         userinfo = db.login(user_db, (username, password))
         if userinfo is None:
             return {'message': 'Username or password is incorrect'}, 401
@@ -302,13 +301,13 @@ class Usage(Resource):
     @apis.doc(description='Generate all api usage information')
     @requires_auth
     def get(self):
-        weather_usage_total = db.get_api_usage(log_db, 'weather', type='t')
-        weather_usage_24 = db.get_api_usage(log_db, 'weather', type='24')
-        weather_usage_7d = db.get_api_usage(log_db, 'weather', type='7d')
+        weather_usage_total = db.get_api_usage(log_db, 'get_weather', type='t')
+        weather_usage_24 = db.get_api_usage(log_db, 'get_weather', type='24')
+        weather_usage_7d = db.get_api_usage(log_db, 'get_weather', type='7d')
         # predict api
-        predict_usage_total = db.get_api_usage(log_db, 'predict', type='t')
-        predict_usage_24 = db.get_api_usage(log_db, 'predict', type='24')
-        predict_usage_7d = db.get_api_usage(log_db, 'predict', type='7d')
+        predict_usage_total = db.get_api_usage(log_db, 'predict_weather', type='t')
+        predict_usage_24 = db.get_api_usage(log_db, 'predict_weather', type='24')
+        predict_usage_7d = db.get_api_usage(log_db, 'predict_weather', type='7d')
         # register api only record the successful registration
         register_usage_total = db.get_api_usage(log_db, 'register', type='t')
         register_usage_24 = db.get_api_usage(log_db, 'register', type='24')
@@ -331,7 +330,7 @@ class Usage(Resource):
     @apis.response(403, 'No permission to access this api')
     @apis.doc(description='Generate specific api usage information',params={'api_name': 'The name of the api'})
     def get(self, api_name):
-        log_map = {'predict_weather': 'predict', 'login':'authenticate', 'get_weather':'weather', 'signup':'register'}
+        log_map = {'predict_weather': 'predict_weather', 'login':'authenticate', 'get_weather':'get_weather', 'signup':'register'}
         if api_name not in log_map.keys():
             apis.abort(404, "API {} doesn't support to be check or doesn't exist".format(api_name))
         usage_total = db.get_api_usage(log_db, log_map[api_name], type='t')
