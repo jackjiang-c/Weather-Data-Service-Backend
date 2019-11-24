@@ -1,0 +1,372 @@
+{
+    "swagger": "2.0",
+    "basePath": "/",
+    "paths": {
+        "/api/usage": {
+            "get": {
+                "responses": {
+                    "403": {
+                        "description": "No permission to access this api"
+                    },
+                    "404": {
+                        "description": "The usage information does not exist"
+                    },
+                    "200": {
+                        "description": "The usage data has generated and returned successfully"
+                    }
+                },
+                "description": "Generate all api usage information",
+                "operationId": "get_usage",
+                "tags": [
+                    "api"
+                ]
+            }
+        },
+        "/api/usage/{api_name}": {
+            "get": {
+                "responses": {
+                    "403": {
+                        "description": "No permission to access this api"
+                    },
+                    "404": {
+                        "description": "The usage information does not exist"
+                    },
+                    "200": {
+                        "description": "The usage information has return successfully"
+                    }
+                },
+                "description": "Generate specific api usage information",
+                "operationId": "get_usage",
+                "parameters": [
+                    {
+                        "name": "api_name",
+                        "in": "path",
+                        "required": true,
+                        "type": "string",
+                        "description": "The name of the api"
+                    }
+                ],
+                "tags": [
+                    "api"
+                ]
+            }
+        },
+        "/users/get_info/{uid}": {
+            "parameters": [
+                {
+                    "name": "uid",
+                    "in": "path",
+                    "required": true,
+                    "type": "integer"
+                }
+            ],
+            "get": {
+                "responses": {
+                    "404": {
+                        "description": "The user id is not exist"
+                    },
+                    "403": {
+                        "description": "No permission to access. Normal user can only access own id endpoint"
+                    },
+                    "401": {
+                        "description": "Authentication token is missing or expired"
+                    },
+                    "200": {
+                        "description": "The user information has been generated and returned successfully",
+                        "schema": {
+                            "$ref": "#/definitions/user information"
+                        }
+                    }
+                },
+                "description": "Return the user information by specific id",
+                "operationId": "get_users",
+                "parameters": [
+                    {
+                        "description": "A user ID",
+                        "name": "id",
+                        "type": "string",
+                        "in": "query"
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/get_weather": {
+            "get": {
+                "responses": {
+                    "504": {
+                        "description": "No response from the upstream weather api"
+                    },
+                    "200": {
+                        "description": "Get the current weather Successful from the upstream weather api"
+                    },
+                    "401": {
+                        "description": "Authentication token is missing or expired"
+                    }
+                },
+                "description": "get real time weather data",
+                "operationId": "get_get_weather",
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/login": {
+            "post": {
+                "responses": {
+                    "401": {
+                        "description": "user's login credential information is incorrect"
+                    },
+                    "200": {
+                        "description": "user login successfully and a authentication has been returned."
+                    }
+                },
+                "description": "Return an authentication token for user",
+                "operationId": "post_authentication",
+                "parameters": [
+                    {
+                        "name": "username",
+                        "in": "query",
+                        "type": "string"
+                    },
+                    {
+                        "name": "password",
+                        "in": "query",
+                        "type": "string"
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/predict_weather": {
+            "post": {
+                "responses": {
+                    "200": {
+                        "description": "The prediction has been made successfully"
+                    },
+                    "401": {
+                        "description": "Authentication token is missing or expired"
+                    }
+                },
+                "description": "Predict wind, rain and temperature\uff0crecomment_clothes by climate data",
+                "operationId": "post_prediction",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/climate"
+                        }
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            }
+        },
+        "/users/signup": {
+            "post": {
+                "responses": {
+                    "400": {
+                        "description": "The validation error, some fields are invalid or missing."
+                    },
+                    "200": {
+                        "description": "The new user has been created successfully"
+                    }
+                },
+                "description": "Create a new user",
+                "operationId": "post_registration",
+                "parameters": [
+                    {
+                        "name": "payload",
+                        "required": true,
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/registration"
+                        }
+                    }
+                ],
+                "tags": [
+                    "users"
+                ]
+            }
+        }
+    },
+    "info": {
+        "title": "API",
+        "version": "1.0",
+        "description": "Weather prediction service api"
+    },
+    "produces": [
+        "application/json"
+    ],
+    "consumes": [
+        "application/json"
+    ],
+    "securityDefinitions": {
+        "API-KEY": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "AUTH-TOKEN"
+        }
+    },
+    "security": [
+        {
+            "API-KEY": []
+        }
+    ],
+    "tags": [
+        {
+            "name": "users",
+            "description": "User operations"
+        },
+        {
+            "name": "api",
+            "description": "Statistics about the api"
+        }
+    ],
+    "definitions": {
+        "climate": {
+            "properties": {
+                "temp_avg": {
+                    "type": "number",
+                    "description": "The average temperature",
+                    "minimum": -50,
+                    "maximum": 80
+                },
+                "rainfall": {
+                    "type": "number",
+                    "description": "The railfall",
+                    "minimum": 0,
+                    "maximum": 2000
+                },
+                "evaporation": {
+                    "type": "number",
+                    "description": "The evaporation",
+                    "minimum": 0,
+                    "maximum": 1000
+                },
+                "sunshine": {
+                    "type": "number",
+                    "description": "The sunshine duration",
+                    "minimum": 0,
+                    "maximum": 24
+                },
+                "windGustSpeed": {
+                    "type": "number",
+                    "description": "The wind gust speed",
+                    "minimum": 0,
+                    "maximum": 500
+                },
+                "windSpeed_avg": {
+                    "type": "number",
+                    "description": "The average wind speed",
+                    "minimum": 0,
+                    "maximum": 500
+                },
+                "humidity_avg": {
+                    "type": "number",
+                    "description": "The average humidity",
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "pressure_avg": {
+                    "type": "number",
+                    "description": "The average pressure",
+                    "minimum": 0,
+                    "maximum": 2000
+                },
+                "cloud_avg": {
+                    "type": "number",
+                    "description": "The wind gust speed",
+                    "minimum": 0,
+                    "maximum": 100
+                }
+            },
+            "type": "object"
+        },
+        "registration": {
+            "properties": {
+                "username": {
+                    "type": "string",
+                    "description": "The username of user",
+                    "minLength": 4
+                },
+                "password": {
+                    "type": "string",
+                    "description": "The password of user",
+                    "minLength": 6
+                },
+                "firstName": {
+                    "type": "string",
+                    "description": "The first name of user",
+                    "minLength": 1
+                },
+                "lastName": {
+                    "type": "string",
+                    "description": "The last name of user",
+                    "minLength": 1
+                },
+                "age": {
+                    "type": "integer",
+                    "description": "The age of user",
+                    "minimum": 0,
+                    "maximum": 200
+                },
+                "gender": {
+                    "type": "string",
+                    "description": "The gender of user",
+                    "example": "Male",
+                    "enum": [
+                        "Male",
+                        "Female"
+                    ]
+                }
+            },
+            "type": "object"
+        },
+        "user information": {
+            "properties": {
+                "firstName": {
+                    "type": "string",
+                    "description": "The first name of user",
+                    "minLength": 1
+                },
+                "lastName": {
+                    "type": "string",
+                    "description": "The last name of user",
+                    "minLength": 1
+                },
+                "age": {
+                    "type": "integer",
+                    "description": "The age of user",
+                    "minimum": 0,
+                    "maximum": 200
+                },
+                "gender": {
+                    "type": "string",
+                    "description": "The gender of user",
+                    "example": "Male",
+                    "enum": [
+                        "Male",
+                        "Female"
+                    ]
+                }
+            },
+            "type": "object"
+        }
+    },
+    "responses": {
+        "ParseError": {
+            "description": "When a mask can't be parsed"
+        },
+        "MaskError": {
+            "description": "When any error occurs on mask"
+        }
+    }
+}

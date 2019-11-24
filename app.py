@@ -200,7 +200,7 @@ class getWeather(Resource):
 class Prediction(Resource):
     @users.response(401, 'Authentication token is missing or expired')
     @users.response(200, 'The prediction has been made successfully')
-    @users.doc(description='Predict wind, rain and temperature by climate data')
+    @users.doc(description='Predict wind, rain and temperature，recomment_clothes by climate data')
     @users.expect(climate_model, validate=True)
     @requires_auth
     def post(self):
