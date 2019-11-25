@@ -56,9 +56,9 @@ def predictWeather(climate, rain_model_, wind_model_, temp_model_, flu_model_):
     _df_predict.drop(['windGustSpeed', 'cloud_avg'], inplace=True, axis=1)
     raw_chance = flu_model_.predict(_df_predict)[0]
     msg = ''
-    if 0 <= raw_chance <= 10:
+    if 0 <= raw_chance <= 0.10:
         msg = 'Low'
-    elif 10 < raw_chance <= 20:
+    elif 0.10 < raw_chance <= 0.15:
         msg = 'Medium'
     else:
         msg = 'High'
