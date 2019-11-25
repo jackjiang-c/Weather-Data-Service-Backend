@@ -12,7 +12,10 @@
                         "description": "The usage information does not exist"
                     },
                     "200": {
-                        "description": "The usage data has generated and returned successfully"
+                        "description": "The usage data has generated and returned successfully",
+                        "schema": {
+                            "$ref": "#/definitions/general_usage"
+                        }
                     }
                 },
                 "description": "Generate all api usage information",
@@ -32,7 +35,10 @@
                         "description": "The usage information does not exist"
                     },
                     "200": {
-                        "description": "The usage information has return successfully"
+                        "description": "The usage information has return successfully",
+                        "schema": {
+                            "$ref": "#/definitions/usage"
+                        }
                     }
                 },
                 "description": "Generate specific api usage information",
@@ -142,17 +148,20 @@
                 ]
             }
         },
-        "/users/predict_weather": {
+        "/users/predict_weather_flu": {
             "post": {
                 "responses": {
                     "200": {
-                        "description": "The prediction has been made successfully"
+                        "description": "The prediction has been made successfully",
+                        "schema": {
+                            "$ref": "#/definitions/prediction_result"
+                        }
                     },
                     "401": {
                         "description": "Authentication token is missing or expired"
                     }
                 },
-                "description": "Predict wind, rain and temperature\uff0crecomment_clothes by climate data",
+                "description": "Predict wind, rain and temperature, danger of flu\uff0crecomment_clothes by climate data",
                 "operationId": "post_prediction",
                 "parameters": [
                     {
@@ -200,7 +209,7 @@
     "info": {
         "title": "API",
         "version": "1.0",
-        "description": "Weather prediction service api"
+        "description": "Weather prediction service, predict weather and flu,  and give dressing advice"
     },
     "produces": [
         "application/json"
@@ -241,7 +250,7 @@
                 },
                 "rainfall": {
                     "type": "number",
-                    "description": "The railfall",
+                    "description": "The rainfall",
                     "minimum": 0,
                     "maximum": 2000
                 },
@@ -286,6 +295,47 @@
                     "description": "The wind gust speed",
                     "minimum": 0,
                     "maximum": 100
+                }
+            },
+            "type": "object"
+        },
+        "prediction_result": {
+            "properties": {
+                "rain": {
+                    "type": "string",
+                    "description": "Indication of whether is rain tomorrow",
+                    "example": "Yes",
+                    "enum": [
+                        "Yes",
+                        "No"
+                    ]
+                },
+                "wind": {
+                    "type": "string",
+                    "description": "The wind intensity for tomorrow",
+                    "example": "Common",
+                    "enum": [
+                        "Common",
+                        "Strong"
+                    ]
+                },
+                "temp": {
+                    "type": "number",
+                    "description": "The average temperature for tomorrow"
+                },
+                "clothes": {
+                    "type": "string",
+                    "description": "The recommend clothes picture filename, please check at client assets"
+                },
+                "flu": {
+                    "type": "string",
+                    "description": "The flu activity level",
+                    "example": "Low",
+                    "enum": [
+                        "Low",
+                        "Medium",
+                        "High"
+                    ]
                 }
             },
             "type": "object"
@@ -356,6 +406,43 @@
                         "Male",
                         "Female"
                     ]
+                }
+            },
+            "type": "object"
+        },
+        "general_usage": {
+            "properties": {
+                "signup": {
+                    "$ref": "#/definitions/usage"
+                },
+                "login": {
+                    "$ref": "#/definitions/usage"
+                },
+                "get_weather": {
+                    "$ref": "#/definitions/usage"
+                },
+                "predict_weather": {
+                    "$ref": "#/definitions/usage"
+                }
+            },
+            "type": "object"
+        },
+        "usage": {
+            "properties": {
+                "last24": {
+                    "type": "integer",
+                    "description": "Last 24 hours usage of the api"
+                },
+                "last7d": {
+                    "type": "array",
+                    "description": "list of last 7 days usage of the api",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "description": "Total usage of the api"
                 }
             },
             "type": "object"

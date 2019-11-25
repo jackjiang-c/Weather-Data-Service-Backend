@@ -28,9 +28,9 @@ api = Api(app, authorizations={
         'name': 'AUTH-TOKEN'
     }
 },
-      default='General request',
-      security='API-KEY',
-      description="Weather prediction service api")
+          default='General request',
+          security='API-KEY',
+          description="Weather prediction service, predict weather and flu,  and give dressing advice")
 
 port = 9999
 cors = CORS(app)
@@ -57,7 +57,7 @@ user_model = api.model('user information', {
 
 climate_model = users.model('climate', {
     'temp_avg': fields.Float(description='The average temperature', require=True, min=-50, max=80),
-    'rainfall': fields.Float(description='The railfall', require=True, min=0, max=2000),
+    'rainfall': fields.Float(description='The rainfall', require=True, min=0, max=2000),
     'evaporation': fields.Float(description='The evaporation', require=True, min=0, max=1000),
     'sunshine': fields.Float(description='The sunshine duration', require=True, min=0, max=24),
     'windGustSpeed': fields.Float(description='The wind gust speed', require=True, min=0, max=500),
@@ -65,6 +65,30 @@ climate_model = users.model('climate', {
     'humidity_avg': fields.Float(description='The average humidity', require=True, min=0, max=100),
     'pressure_avg': fields.Float(description='The average pressure', require=True, min=0, max=2000),
     'cloud_avg': fields.Float(description='The wind gust speed', require=True, min=0, max=100)
+})
+
+prediction_result_model = users.model('prediction_result', {
+    'rain': fields.String(description='Indication of whether is rain tomorrow', enum=['Yes', 'No']),
+    'wind': fields.String(description='The wind intensity for tomorrow', enum=['Common', 'Strong']),
+    'temp': fields.Float(description='The average temperature for tomorrow'),
+    'clothes': fields.String(description='The recommend clothes picture filename, please check at client assets'),
+    'flu': fields.String(description='The flu activity level', enum=['Low', 'Medium', 'High']),
+})
+
+
+usage_fields = {
+    'last24': fields.Integer(description='Last 24 hours usage of the api'),
+    'last7d': fields.List(fields.Integer, description='list of last 7 days usage of the api'),
+    'total': fields.Integer(description='Total usage of the api')
+}
+
+usage_stats_model = apis.model('usage', usage_fields)
+
+general_usage_model = apis.model('general_usage', {
+    'signup': fields.Nested(usage_stats_model),
+    'login': fields.Nested(usage_stats_model),
+    'get_weather': fields.Nested(usage_stats_model),
+    'predict_weather': fields.Nested(usage_stats_model)
 })
 
 api_type = api.model('api_type', {
@@ -196,11 +220,11 @@ class getWeather(Resource):
         return jsonify({'weather': w, 'climate': cli})
 
 
-@users.route('/predict_weather')
+@users.route('/predict_weather_flu')
 class Prediction(Resource):
     @users.response(401, 'Authentication token is missing or expired')
-    @users.response(200, 'The prediction has been made successfully')
-    @users.doc(description='Predict wind, rain and temperature，recomment_clothes by climate data')
+    @users.response(200, 'The prediction has been made successfully', model=prediction_result_model)
+    @users.doc(description='Predict wind, rain and temperature, danger of flu，recomment_clothes by climate data')
     @users.expect(climate_model, validate=True)
     @requires_auth
     def post(self):
@@ -218,8 +242,8 @@ class Prediction(Resource):
             if data < value_validation[key][0] or data > value_validation[key][1]:
                 return {'message': 'The property {} is invalid'.format(key)}, 400
             transform[key] = data
-        result = predictWeather(transform, rain_predictor, wind_predictor, temp_predictor)
-        db.log_usage(log_db, 'predict_weather', time())
+        result = predictWeather(transform, rain_predictor, wind_predictor, temp_predictor, flu_predictor)
+        db.log_usage(log_db, 'predict_weather_flu', time())
         sleep(0.2)
         result['temp'] = float(format(result['temp'], '.1f'))
         token = request.headers.get('AUTH-TOKEN')
@@ -300,7 +324,7 @@ class Authentication(Resource):
 
 @apis.route('/usage')
 class Usage(Resource):
-    @apis.response(200, 'The usage data has generated and returned successfully')
+    @apis.response(200, 'The usage data has generated and returned successfully', model=general_usage_model)
     @apis.response(404, 'The usage information does not exist')
     @apis.response(403, 'No permission to access this api')
     @apis.doc(description='Generate all api usage information')
@@ -310,9 +334,9 @@ class Usage(Resource):
         weather_usage_24 = db.get_api_usage(log_db, 'get_weather', type='24')
         weather_usage_7d = db.get_api_usage(log_db, 'get_weather', type='7d')
         # predict api
-        predict_usage_total = db.get_api_usage(log_db, 'predict_weather', type='t')
-        predict_usage_24 = db.get_api_usage(log_db, 'predict_weather', type='24')
-        predict_usage_7d = db.get_api_usage(log_db, 'predict_weather', type='7d')
+        predict_usage_total = db.get_api_usage(log_db, 'predict_weather_flu', type='t')
+        predict_usage_24 = db.get_api_usage(log_db, 'predict_weather_flu', type='24')
+        predict_usage_7d = db.get_api_usage(log_db, 'predict_weather_flu', type='7d')
         # register api only record the successful registration
         register_usage_total = db.get_api_usage(log_db, 'register', type='t')
         register_usage_24 = db.get_api_usage(log_db, 'register', type='24')
@@ -322,7 +346,8 @@ class Usage(Resource):
         auth_usage_24 = db.get_api_usage(log_db, 'authenticate', type='24')
         auth_usage_7d = db.get_api_usage(log_db, 'authenticate', type='7d')
         result = {'get_weather': {'last24': weather_usage_24, 'last7d': weather_usage_7d, 'total': weather_usage_total},
-                  'predict_weather': {'last24': predict_usage_24, 'last7d': predict_usage_7d, 'total': predict_usage_total},
+                  'predict_weather_flu': {'last24': predict_usage_24, 'last7d': predict_usage_7d,
+                                          'total': predict_usage_total},
                   'login': {'last24': auth_usage_24, 'last7d': auth_usage_7d, 'total': auth_usage_total},
                   'signup': {'last24': register_usage_24, 'last7d': register_usage_7d, 'total': register_usage_total}}
         return jsonify(result)
@@ -330,12 +355,13 @@ class Usage(Resource):
 
 @apis.route('/usage/<string:api_name>')
 class Usage(Resource):
-    @apis.response(200, 'The usage information has return successfully')
+    @apis.response(200, 'The usage information has return successfully', model=usage_stats_model)
     @apis.response(404, 'The usage information does not exist')
     @apis.response(403, 'No permission to access this api')
-    @apis.doc(description='Generate specific api usage information',params={'api_name': 'The name of the api'})
+    @apis.doc(description='Generate specific api usage information', params={'api_name': 'The name of the api'})
     def get(self, api_name):
-        log_map = {'predict_weather': 'predict_weather', 'login':'authenticate', 'get_weather':'get_weather', 'signup':'register'}
+        log_map = {'predict_weather_flu': 'predict_weather_flu', 'login': 'authenticate', 'get_weather': 'get_weather',
+                   'signup': 'register'}
         if api_name not in log_map.keys():
             apis.abort(404, "API {} doesn't support to be check or doesn't exist".format(api_name))
         usage_total = db.get_api_usage(log_db, log_map[api_name], type='t')
@@ -354,6 +380,7 @@ if __name__ == '__main__':
     rain_predictor = joblib.load('./models/rain.model')
     temp_predictor = joblib.load('./models/temp.model')
     wind_predictor = joblib.load('./models/wind.model')
+    flu_predictor = joblib.load('./models/flu.model')
     # set up authentication
     SECRET_KEY = "I DONT ALWAYS USE INTERNET EXPLORER BUT WHEN I DO ITS USUALLY TO DOWNLOAD A BETTER BROWSER"
     expires_in = 60000

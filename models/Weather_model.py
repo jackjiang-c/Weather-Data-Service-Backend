@@ -25,7 +25,7 @@ Y_rain_test = Y_test["tomorrow_rain"]
 
 model_rain = RandomForestClassifier(n_estimators=80)
 model_rain.fit(X_train, Y_rain_train)
-#joblib.dump(model_rain,'rain.model')
+joblib.dump(model_rain,'rain.model')
 #Y_rain_predict = model_rain.predict(X_test)
 #print(model_rain.predict(weather_value))
 #print(classification_report(Y_rain_test, Y_rain_predict))
@@ -55,3 +55,15 @@ joblib.dump(model_temp,'temp.model')
 #print(r2_score(Y_temp_test, Y_temp_predict))
 #print(mean_squared_error(Y_temp_test, Y_temp_predict))
 #print("--------------------------------------------")
+
+# train the flu vs weather data to indicate the chance of getting flu by the climate data
+df = pd.read_csv("flu_raw.csv")
+weather_value = df.tail().loc[:, :"pressure_avg"]
+X = df.loc[:, :'pressure_avg']
+Y = df.loc[:,"flu_percentage_of_year":]
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, train_size=0.8, random_state=4)
+Y_temp_train = Y_train["flu_percentage_of_year"]
+Y_temp_test = Y_test["flu_percentage_of_year"]
+model_flu = RandomForestRegressor(n_estimators=80)
+model_flu.fit(X_train, Y_temp_train)
+joblib.dump(model_flu,'flu.model')
